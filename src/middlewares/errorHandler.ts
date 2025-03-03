@@ -6,7 +6,6 @@ interface CustomError extends Error {
 }
 
 
-
 export const errorHandler = (error: CustomError, req: Request, res: Response, next: NextFunction) => {
   const timestamp = new Date().toISOString();
   // Detailed logging with timestamp, request details, and error stack

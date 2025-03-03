@@ -60,7 +60,9 @@
 //       public age: number
 //     ) {}
 //   }
-export class UserRequest {
+import { Document as MongoDocument, ObjectId } from 'mongodb';
+export class UserRequest implements MongoDocument {
+  _id?:ObjectId;
   constructor(
     public firstname: string,
     public lastname: string,
@@ -77,7 +79,8 @@ export class UserRequest {
   }
 }
 
-export class UserResponse {
+export class UserResponse implements MongoDocument {
+  _id?:ObjectId
   constructor(
     public id: string,
     public firstname: string,

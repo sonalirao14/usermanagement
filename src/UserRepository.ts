@@ -16,9 +16,17 @@ export class UserRepository implements IUserRepository {
 
   async createUserAsync(user: UserRequest): Promise<UserResponse> {
     try {
+      // Check for existing user with the same email
+      const existingUser = await this.db.findOne<UserRequest>(this.collectionName, { email: user.email });
+      if (existingUser) {
+        throw new DuplicateKeyError(`Duplicate email: ${user.email}`, { email: user.email });
+      }
       const userId = await this.db.insertOne<UserRequest>(this.collectionName, user);
       return new UserResponse(userId, user.firstname,user.lastname,user.course, user.email, user.age);
     } catch (error) {
+      if (error instanceof DuplicateKeyError) {
+        throw error; // Re-throw DuplicateKeyError without modification
+      }
       if (error instanceof Error) {
         if (error.message.includes('Duplicate')) {
           throw new DuplicateKeyError(error.message, { email: user.email });
@@ -56,6 +64,10 @@ export class UserRepository implements IUserRepository {
 
   async updateUserAsync(id: string, user: UserRequest): Promise<boolean> {
     try {
+      const existingUser = await this.db.findOne<UserRequest &  { _id: ObjectId }>(this.collectionName, { email: user.email });
+      if (existingUser && existingUser._id.toString() !== id) {
+        throw new DuplicateKeyError(`Duplicate email: ${user.email}`, { email: user.email });
+      }
       return await this.db.updateOne<UserRequest>(this.collectionName, { _id: new ObjectId(id) }, { $set: user });
     } catch (error) {
       if (error instanceof Error) {

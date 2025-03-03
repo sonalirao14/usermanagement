@@ -28,21 +28,6 @@ export class DatabaseAccess implements IDatabase {
         this.connected = true;
         console.log('Connected to MongoDB');
 
-        // Create unique index on email field for the users collection
-        try {
-          await this.db.collection('users').createIndex({ email: 1 }, { unique: true });
-          console.log('Created unique index on email field for users collection');
-        } catch (error) {
-          if (error instanceof MongoServerError && error.code === 11000) {
-            console.warn('E11000 duplicate key error: Duplicate emails found in the users collection. Resolving duplicates...');
-            await this.resolveDuplicateEmails();
-            // Retry creating the index after resolving duplicates
-            await this.db.collection('users').createIndex({ email: 1 }, { unique: true });
-            console.log('Successfully created unique index on email field after resolving duplicates');
-          } else {
-            throw error; // Rethrow other errors
-          }
-        }
       } catch (error) {
         if (error instanceof Error) {
           retries--;
@@ -60,30 +45,6 @@ export class DatabaseAccess implements IDatabase {
     }
   }
 
-  private async resolveDuplicateEmails(): Promise<void> {
-    try {
-      const collection = this.db!.collection('users');
-      // Find duplicate emails
-      const duplicates = await collection.aggregate([
-        { $group: { _id: "$email", ids: { $push: "$_id" }, count: { $sum: 1 } } },
-        { $match: { count: { $gt: 1 } } }
-      ]).toArray();
-
-      for (const duplicate of duplicates) {
-        const ids = duplicate.ids as string[];
-        // Keep the first document, delete the rest
-        const keepId = ids.shift(); // Keep the first _id
-        await collection.deleteMany({ _id: { $in: ids.map(id => new ObjectId(id)) } });
-        console.log(`Resolved duplicate email '${duplicate._id}': Kept document with _id '${keepId}', deleted ${ids.length} duplicates`);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new DatabaseError('Failed to resolve duplicate emails', error.message);
-      }
-      throw new DatabaseError('Failed to resolve duplicate emails', 'Unknown error');
-    }
-  }
-
   private async reconnect(): Promise<void> {
     if (this.reconnecting) return;
     this.reconnecting = true;
@@ -97,20 +58,6 @@ export class DatabaseAccess implements IDatabase {
         this.db = this.client.db('userdb');
         this.connected = true;
         console.log('Reconnected to MongoDB');
-
-        // Re-create unique index on email field
-        try {
-          await this.db.collection('users').createIndex({ email: 1 }, { unique: true });
-          console.log('Created unique index on email field for users collection after reconnection');
-        } catch (error) {
-          if (error instanceof MongoServerError && error.code === 11000) {
-            await this.resolveDuplicateEmails();
-            await this.db.collection('users').createIndex({ email: 1 }, { unique: true });
-            console.log('Successfully created unique index on email field after resolving duplicates');
-          } else {
-            throw error;
-          }
-        }
         break;
       } catch (error) {
         if (error instanceof Error) {
