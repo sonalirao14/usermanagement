@@ -103,12 +103,12 @@
 // }
 
 
-import { Router, Request } from 'express';
+import { Router, Request, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
 import { IUserService } from '../contracts/IUserService';
 import { DependencyKeys } from '../constant';
 import { validateUser } from '../middlewares/validateUser';
-import { UserRequest, UserResponse } from '../models/UserModel';
+import { NotFoundError, UserRequest, UserResponse, ValidationError } from '../models/UserModel';
 
 @injectable()
 export class UserRoutes {
@@ -122,72 +122,82 @@ export class UserRoutes {
   }
 
   private setupRoutes() {
-    // Add User (POST /api/users)
-    this.router.post('/user', validateUser, async (req, res) => {
-      const user = UserRequest.fromJson(req.body);
+    // Add User into database
+    this.router.post('/user', validateUser, async (req, res,next) => {
+     try{ const user = UserRequest.fromJson(req.body);
       const result = await this.userService.createUserAsync(user);
       res.status(201).json(result);
+      return;
+     } catch(e){
+      next(e);
+     }
     });
 
-    // Get All Users (GET /api/users)
-    this.router.get('/users', async (req: Request, res) => {
-      const users = await this.userService.getAllAsync();
+    // Get All Users data
+    this.router.get('/users', async (req: Request, res, next:NextFunction) => {
+     try{ const users = await this.userService.getAllAsync();
       res.status(200).json(users);
+      return;
+     }catch(error){
+      next(error);
+     }
     });
 
-    // Get User by ID (GET /api/users/:id)
-    this.router.get('/user/:id', async (req: Request, res) => {
-      const id = req.params.id;
+    // Get specific User by id
+    this.router.get('/user/:id', async (req: Request, res,next) => {
+     try{ const id = req.params.id;
       if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-        const error = new Error('Invalid user ID') as any;
-        error.status = 400;
+        const error = new ValidationError('Invalid user ID') as any;
         throw error;
       }
       const user = await this.userService.getUserAsync(id);
       if (!user) {
-        const error = new Error('User not found') as any;
-        error.status = 404;
+        const error = new NotFoundError('User not found') as any;
         throw error;
       }
       res.status(200).json(user);
+    }catch(e){
+      next(e);
+    }
     });
 
-    // Update User (PUT /api/users/:id)
-    this.router.put('/user/:id', validateUser, async (req: Request, res) => {
-      const id = req.params.id;
+    // Update User data
+    this.router.put('/user/:id', validateUser, async (req: Request, res,next) => {
+     try{ const id = req.params.id;
       if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-        const error = new Error('Invalid user ID') as any;
-        error.status = 400;
+        const error = new ValidationError('Invalid user ID') as any;
         throw error;
       }
       const user = UserRequest.fromJson(req.body);
       const updated = await this.userService.updateUserAsync(id, user);
       if (!updated) {
-        const error = new Error('User not found') as any;
-        error.status = 404;
+        const error = new NotFoundError('User not found') as any;
         throw error;
       }
       res.status(200).json({ message: 'User updated' });
+    } catch(e){
+      next(e);
+    }
     });
 
-    // Delete User (DELETE /api/users/:id)
-    this.router.delete('/users/:id', async (req: Request, res) => {
-      const id = req.params.id;
+    // Delete User based on given id
+    this.router.delete('/users/:id', async (req: Request, res,next) => {
+      try{const id = req.params.id;
       if (!id.match(/^[0-9a-fA-F]{24}$/)) {
-        const error = new Error('Invalid user ID') as any;
-        error.status = 400;
+        const error = new ValidationError('Invalid user ID');
         throw error;
       }
       const deleted = await this.userService.deleteUserAsync(id);
       if (!deleted) {
-        const error = new Error('User not found') as any;
-        error.status = 404;
+        const error = new NotFoundError('User not found');
         throw error;
       }
-      res.status(200).json({ message: 'User deleted' });
+      res.status(200).json({ message:'User deleted' });
+    }catch(e){
+      next(e);
+    }
     });
   }
-
   getRouter(): Router {
     return this.router;
   }
