@@ -6,6 +6,8 @@ import { AppBuilder } from './AppBuilder';
 import { DependencyKeys } from './constant';
 import { UserRoutes } from './routes/UserRoutes';
 import { DatabaseAccess } from './mongo_connector/DataBaseAccess';
+import { UserRepository } from './UserRepository';
+import { IUserRepository } from './contracts/IUserRepository';
 
 const container = new Container();
 
@@ -20,5 +22,8 @@ container.bind<UserRoutes>(DependencyKeys.Routes).to(UserRoutes);
 
 // Bind AppBuilder
 container.bind<AppBuilder>(DependencyKeys.AppBuilder).to(AppBuilder);
+
+// Bind Userrepository
+container.bind<IUserRepository>(DependencyKeys.UserRepository).to(UserRepository);
 
 export default container;
