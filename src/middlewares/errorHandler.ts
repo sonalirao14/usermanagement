@@ -5,24 +5,7 @@ interface CustomError extends Error {
   details?: any;
 }
 
-// Middleware to log request details
-export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  const timestamp = new Date().toISOString();
 
-  // Log the incoming request
-  console.log(`[${timestamp}] ${req.method} ${req.url} - Request received`);
-
-  // Hook into the response's finish event to log the response status
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(
-      `[${timestamp}] ${req.method} ${req.url} - Response sent: ${res.statusCode} (${duration}ms)`
-    );
-  });
-
-  next();
-};
 
 export const errorHandler = (error: CustomError, req: Request, res: Response, next: NextFunction) => {
   const timestamp = new Date().toISOString();
@@ -37,12 +20,10 @@ export const errorHandler = (error: CustomError, req: Request, res: Response, ne
     stack: error.stack,
   });
 
-  // Default status code and message
   const status = error.status || 500;
   const message = error.message || 'Internal Server Error';
   const details = error.details || null;
 
-  // Send a consistent error response
   res.status(status).json({
     error: message,
     status,

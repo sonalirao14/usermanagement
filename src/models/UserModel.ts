@@ -110,3 +110,25 @@ export class DatabaseError extends Error {
   status: number;
   // public details?: any; // Make it optional (?) and explicitly public to match constructor
 }
+
+export class NotFoundError extends Error {
+  constructor(message: string, public details?: any) {
+    super(message);
+    this.name = 'NotFoundError';
+    this.status = 404;
+    this.details = details;
+  }
+
+  status: number;
+}
+
+export class DuplicateKeyError extends Error {
+  constructor(message: string, public details?: any) {
+    super(message);
+    this.name = 'DuplicateKeyError';
+    this.status = 409; 
+    this.details = details;
+  }
+
+  status: number;
+}
