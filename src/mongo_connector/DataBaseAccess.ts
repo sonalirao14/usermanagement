@@ -112,16 +112,6 @@ export class DatabaseAccess implements IDatabase {
       const result = await collection.insertOne(document);
       return result.insertedId.toString();
     } catch (error) {
-      if (error instanceof MongoServerError) {
-        if (error.code === 11000) {
-          const fieldMatch = error.message.match(/index: (\w+)_1/);
-          const field = fieldMatch ? fieldMatch[1] : 'unknown field';
-          const valueMatch = error.message.match(/dup key: { : "(.+)" }/);
-          const value = valueMatch ? valueMatch[1] : 'unknown value';
-          throw new DatabaseError(`Duplicate ${field}: ${value}`, `Duplicate key error: ${error.message}`);
-        }
-        throw new DatabaseError(`Failed to insert document into collection '${collectionName}'`, error.message);
-      }
       if (error instanceof Error) {
         throw new DatabaseError(`Failed to insert document into collection '${collectionName}'`, error.message);
       }
@@ -163,16 +153,6 @@ export class DatabaseAccess implements IDatabase {
       const result = await collection.updateOne(query, update, options);
       return result.modifiedCount > 0;
     } catch (error) {
-      if (error instanceof MongoServerError) {
-        if (error.code === 11000) {
-          const fieldMatch = error.message.match(/index: (\w+)_1/);
-          const field = fieldMatch ? fieldMatch[1] : 'unknown field';
-          const valueMatch = error.message.match(/dup key: { : "(.+)" }/);
-          const value = valueMatch ? valueMatch[1] : 'unknown value';
-          throw new DatabaseError(`Duplicate ${field}: ${value}`, `Duplicate key error: ${error.message}`);
-        }
-        throw new DatabaseError(`Failed to update document in collection '${collectionName}'`, error.message);
-      }
       if (error instanceof Error) {
         throw new DatabaseError(`Failed to update document in collection '${collectionName}'`, error.message);
       }

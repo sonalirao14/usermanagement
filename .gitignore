@@ -1,0 +1,3 @@
+# .gitignore
+keys/private.pem
+keys/public.pem
