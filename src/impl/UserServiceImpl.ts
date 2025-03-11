@@ -78,7 +78,6 @@ export class UserServiceImpl implements IUserService {
 
   async createUserAsync(user: UserRequest): Promise<UserResponse> {
     const userResponse = await this.userRepository.createUserAsync(user);
-    // Invalidate cache for the users list since a new user was added
     await this.redisClient.del('users:list');
     return userResponse;
   }
@@ -86,17 +85,14 @@ export class UserServiceImpl implements IUserService {
   async getUserAsync(id: string): Promise<UserResponse | null> {
     this.validateId(id);
 
-    // Check cache first
     const cacheKey = `user:${id}`;
     const cachedUser = await this.redisClient.get(cacheKey);
     if (cachedUser) {
       return JSON.parse(cachedUser) as UserResponse;
     }
-
-    // If not in cache, fetch from database
     const user = await this.userRepository.getUserAsync(id);
     if (user) {
-      // Cache the user for 1 hour (3600 seconds)
+      // Cache the user for 1 hour
       await this.redisClient.setex(cacheKey, 3600, JSON.stringify(user));
     }
     return user;
@@ -107,16 +103,14 @@ export class UserServiceImpl implements IUserService {
   }
 
   async getAllAsync(page: number, limit: number): Promise<{ data: UserResponse[], pagination: { total: number, page: number, limit: number, totalPages: number } }> {
-    // Use a cache key based on pagination parameters
+    
     const cacheKey = `users:${page}:${limit}`;
     const cachedResult = await this.redisClient.get(cacheKey);
     if (cachedResult) {
       return JSON.parse(cachedResult) as { data: UserResponse[], pagination: { total: number, page: number, limit: number, totalPages: number } };
     }
-
-    // If not in cache, fetch from database
     const result = await this.userRepository.getAllAsync(page, limit);
-    // Cache the result for 1 hour (3600 seconds)
+    // Cache the result for 1 hour
     await this.redisClient.setex(cacheKey, 3600, JSON.stringify(result));
     return result;
   }
@@ -125,7 +119,6 @@ export class UserServiceImpl implements IUserService {
     this.validateId(id);
     const updated = await this.userRepository.updateUserAsync(id, user);
     if (updated) {
-      // Invalidate cache for this user and the users list
       await this.redisClient.del(`user:${id}`);
       await this.redisClient.del('users:list');
     }
@@ -136,7 +129,6 @@ export class UserServiceImpl implements IUserService {
     this.validateId(id);
     const deleted = await this.userRepository.deleteUserAsync(id);
     if (deleted) {
-      // Invalidate cache for this user and the users list
       await this.redisClient.del(`user:${id}`);
       await this.redisClient.del('users:list');
     }
