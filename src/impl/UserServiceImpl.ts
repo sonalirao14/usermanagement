@@ -50,17 +50,24 @@
 
 
 import { injectable, inject } from 'inversify';
+import { Redis } from 'ioredis';
 import { DependencyKeys } from '../constant';
 import { IUserService } from '../contracts/IUserService';
 import { IUserRepository } from '../contracts/IUserRepository';
 import { UserRequest, UserResponse, ValidationError } from '../models/UserModel';
+import { RedisClient } from '../redis/RedisClient';
 
 @injectable()
 export class UserServiceImpl implements IUserService {
   private userRepository: IUserRepository;
+  private redisClient: Redis;
 
-  constructor(@inject(DependencyKeys.UserRepository) userRepository: IUserRepository) {
+  constructor(
+    @inject(DependencyKeys.UserRepository) userRepository: IUserRepository,
+    @inject(DependencyKeys.RedisClient) redisClient: RedisClient
+  ) {
     this.userRepository = userRepository;
+    this.redisClient = redisClient.getClient();
   }
 
   private validateId(id: string): void {
@@ -68,29 +75,63 @@ export class UserServiceImpl implements IUserService {
       throw new ValidationError('Invalid user ID: must be a 24-character hexadecimal string', { id });
     }
   }
+
   async createUserAsync(user: UserRequest): Promise<UserResponse> {
-    return await this.userRepository.createUserAsync(user);
+    const userResponse = await this.userRepository.createUserAsync(user);
+    await this.redisClient.del('users:list');
+    return userResponse;
   }
 
   async getUserAsync(id: string): Promise<UserResponse | null> {
     this.validateId(id);
-    return await this.userRepository.getUserAsync(id);
+
+    const cacheKey = `user:${id}`;
+    const cachedUser = await this.redisClient.get(cacheKey);
+    if (cachedUser) {
+      return JSON.parse(cachedUser) as UserResponse;
+    }
+    const user = await this.userRepository.getUserAsync(id);
+    if (user) {
+      // Cache the user for 1 hour
+      await this.redisClient.setex(cacheKey, 3600, JSON.stringify(user));
+    }
+    return user;
   }
 
   async findUserAsync(email: string): Promise<UserResponse | null> {
-      return await this.userRepository.findUserAsync(email);
+    return await this.userRepository.findUserAsync(email);
   }
+
   async getAllAsync(page: number, limit: number): Promise<{ data: UserResponse[], pagination: { total: number, page: number, limit: number, totalPages: number } }> {
-    return await this.userRepository.getAllAsync(page, limit);
+    
+    const cacheKey = `users:${page}:${limit}`;
+    const cachedResult = await this.redisClient.get(cacheKey);
+    if (cachedResult) {
+      return JSON.parse(cachedResult) as { data: UserResponse[], pagination: { total: number, page: number, limit: number, totalPages: number } };
+    }
+    const result = await this.userRepository.getAllAsync(page, limit);
+    // Cache the result for 1 hour
+    await this.redisClient.setex(cacheKey, 3600, JSON.stringify(result));
+    return result;
   }
 
   async updateUserAsync(id: string, user: UserRequest): Promise<boolean> {
-    return await this.userRepository.updateUserAsync(id, user);
+    this.validateId(id);
+    const updated = await this.userRepository.updateUserAsync(id, user);
+    if (updated) {
+      await this.redisClient.del(`user:${id}`);
+      await this.redisClient.del('users:list');
+    }
+    return updated;
   }
 
   async deleteUserAsync(id: string): Promise<boolean> {
-    return await this.userRepository.deleteUserAsync(id);
+    this.validateId(id);
+    const deleted = await this.userRepository.deleteUserAsync(id);
+    if (deleted) {
+      await this.redisClient.del(`user:${id}`);
+      await this.redisClient.del('users:list');
+    }
+    return deleted;
   }
 }
-
-
