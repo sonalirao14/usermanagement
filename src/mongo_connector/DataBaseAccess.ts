@@ -173,4 +173,12 @@ export class DatabaseAccess implements IDatabase {
       throw new DatabaseError(`Failed to delete document from collection '${collectionName}'`, 'Unknown error');
     }
   }
+
+  async disconnect(): Promise<void> {
+    if (this.connected) {
+      await this.client.close();
+      this.connected = false;
+      console.log('MongoDB connection closed');
+    }
+  }
 }

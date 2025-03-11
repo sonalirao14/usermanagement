@@ -61,10 +61,10 @@ export class UserRepository implements IUserRepository {
     try {
       const user = await this.db.findOne<UserResponse>(this.collectionName, {email});
       if (!user){
-        throw new NotFoundError("User Not exist");
+        throw new NotFoundError("Email not exist");
       }
       if(!user._id){
-         throw new NotFoundError("User Not exist");
+         throw new NotFoundError("Email user not exist");
       }
       return new UserResponse(user._id.toString(), user.firstname, user.lastname, user.email, user.age, user.hashedPassword);
     } catch (error) {

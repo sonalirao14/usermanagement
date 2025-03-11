@@ -54,15 +54,16 @@ import { AppBuilder } from './AppBuilder';
 import { UserRoutes } from './routes/UserRoutes';
 import { DependencyKeys } from './constant';
 import { DatabaseAccess } from './mongo_connector/DataBaseAccess';
+import { RedisClient } from './redis/RedisClient';
 require('dotenv').config();
 
-// process.on('unhandledRejection', (reason, promise) => {
-//   console.error('Unhandled Rejection at:', promise, 'Reason:', reason);
-// });
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'Reason:', reason);
+});
 
-// process.on('uncaughtException', (error) => {
-//   console.error('Uncaught Exception:', error);
-// });
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
 
 const portEnv = process.env.PORT;
 const port: number = portEnv && !isNaN(parseInt(portEnv)) ? parseInt(portEnv) : 3000;
@@ -71,12 +72,14 @@ async function startServer() {
   const dbAccess = container.get<DatabaseAccess>(DependencyKeys.DatabaseAccess);
   const appBuilder = container.get<AppBuilder>(DependencyKeys.AppBuilder);
   const userRoutes = container.get<UserRoutes>(DependencyKeys.Routes);
+  const redisClient = container.get<RedisClient>(DependencyKeys.RedisClient);
 
   try {
     await dbAccess.initialize();
     console.log('Database initialization completed successfully');
   } catch (error) {
     console.error('Failed to initialize database connection:', error);
+    process.exit(1);
   }
 
   appBuilder
@@ -87,14 +90,15 @@ async function startServer() {
       allowedHeaders: ['Content-Type', 'Authorization'],
     })
     .withApiContext('keys/private.pem', 'keys/public.pem')
-    .withPublicRoutes(['/api/register', '/api/login', '/api/public'])
+    .withPublicRoutes(['/register', '/login'])
     .withJsonContent()
     .withRoute('/', userRoutes.getRouter())
     .withRouteHandler()
     .withErrorHandler()
     .build();
 
-  appBuilder.start(port);
+  const server = appBuilder.start(port);
+ 
 }
 
 startServer();
