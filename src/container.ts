@@ -1,16 +1,19 @@
 import { Container } from 'inversify';
-// import { DatabaseAccess } from './mongo-connector/DatabaseAccess';
 import { IUserService } from './contracts/IUserService';
 import { UserServiceImpl } from './impl/UserServiceImpl';
 import { AppBuilder } from './AppBuilder';
 import { DependencyKeys } from './constant';
 import { UserRoutes } from './routes/UserRoutes';
-import { DatabaseAccess } from './mongo_connector/DataBaseAccess';
+import { DatabaseAccess } from './mongo_connector/DBOperations';
 import { UserRepository } from './UserRepository';
 import { IUserRepository } from './contracts/IUserRepository';
 import { RedisClient } from './redis/RedisClient';
+import { DBConfig } from './mongo_connector/DBConfigProvider';
+import { IDBConfig } from './mongo_connector/contracts/IDBConfig';
 
 const container = new Container();
+ 
+container.bind<IDBConfig>(DependencyKeys.DBConfig).to(DBConfig)
 
 // Bind DatabaseAccess
 container.bind<DatabaseAccess>(DependencyKeys.DatabaseAccess).to(DatabaseAccess);

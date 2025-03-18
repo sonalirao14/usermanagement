@@ -1,5 +1,5 @@
 import { RequestHandler , NextFunction } from 'express';
-import { ValidationError } from '../models/UserModel';
+import { ValidationError } from '../errors/Validationerror';
 export const validateUser: RequestHandler = (req, res, next) => {
   const { firstname,lastname,course,email, age } = req.body;
   // if (!firstname || !lastname || !course || !email || !age || typeof age !== 'number') {

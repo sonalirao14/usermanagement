@@ -13,4 +13,5 @@ export class DependencyKeys {
   public static readonly AppBuilder = Symbol.for("AppBuilder");
   public static readonly Routes = Symbol.for("Routes");
   public static readonly RedisClient = Symbol.for("RedisClient");
+  public static readonly DBConfig = Symbol.for('DBConfig');
 }

@@ -230,7 +230,10 @@ import fs from 'fs';
 import path from 'path';
 import { DependencyKeys } from '../constant';
 import { IUserService } from '../contracts/IUserService';
-import { UserRequest, LoginRequest, ValidationError } from '../models/UserModel';
+// import { UserRequest, LoginRequest} from '../models/UserModel';
+import { UserRequest } from '../models/userRequest';
+import { LoginRequest } from '../models/loginRequest';
+import { ValidationError } from '../errors/Validationerror';
 
 @injectable()
 export class UserRoutes {
@@ -313,10 +316,30 @@ export class UserRoutes {
       }
     });
 
-    this.router.get('/user/:id', async (req: Request, res: Response, next: NextFunction) => {
+    this.router.get('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
       try {
         const id = req.params.id;
         const user = await this.userService.getUserAsync(id);
+        if (!user) {
+          res.status(404).json({ message: 'User not found' });
+          return;
+        }
+        res.status(200).json({
+          id: user.id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          email: user.email,
+          age: user.age,
+        });
+      } catch (error) {
+        next(error);
+      }
+    });
+
+    this.router.get('/user/email/:email', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const email= decodeURIComponent(req.params.email).toLowerCase();
+        const user = await this.userService.findUserAsync(email);
         if (!user) {
           res.status(404).json({ message: 'User not found' });
           return;
@@ -378,6 +401,33 @@ export class UserRoutes {
         next(error);
       }
     });
+    this.router.delete('/users-delete',this.requireAdmin, async (req:Request, res:Response,next:NextFunction) => {
+      try {
+        const { emails } = req.body;
+        if (!emails || !Array.isArray(emails) || emails.length === 0) {
+           res.status(400).json({ error: 'Invalid request, array of emails required' });
+        }
+    
+        const result = await this.userService.deleteUsersAsync(emails);
+        if (result.deletedCount === 0) {
+          res.status(404).json({ 
+            message: 'No users found for deletion',
+            notFoundEmails: result.notFoundEmails 
+          });
+          return ;
+        }
+        res.status(200).json(
+          {
+             message: `Deleted ${result.deletedCount} users`,
+             notFoundEmails: result.notFoundEmails.length >0?result.notFoundEmails :"All users were found and deleted",
+            });
+            return;
+      } catch (error) {
+        console.error(error);
+        next(error);
+      }
+    });
+    
   }
 
   private requireAdmin(req: Request, res: Response, next: NextFunction) {

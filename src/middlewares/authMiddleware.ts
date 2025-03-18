@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { publicRoutes } from '../config/publicRoute';
 import fs from 'fs';
 import path from 'path';
+import { jwtParseFunction } from '../utils/jwtUtils';
 
 let jwtPublicKey: string = '';
 
@@ -10,7 +11,7 @@ export const setJwtKeys = (publicKeyPath: string) => {
   jwtPublicKey = fs.readFileSync(path.resolve(publicKeyPath), 'utf8');
 };
 
-export const installApiContext = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const installApiContext = async (req: Request, res: Response, next:NextFunction): Promise<void> => {
   if (publicRoutes.includes(req.path)) {
     return loadDefaultContext(req, res, next);
   }
@@ -24,14 +25,14 @@ export const installApiContext = async (req: Request, res: Response, next: NextF
     }
 
     if (authToken) {
-      jwt.verify(authToken, jwtPublicKey, { algorithms: ['RS256'] }, (err, decoded) => {
-        if (err) {
-          return res.status(403).json({ message: 'Auth token is expired or missing' });
-        }
+      // jwt.verify(authToken, jwtPublicKey, { algorithms: ['RS256'] }, (err, decoded) => {
+      //   if (err) {
+      //     return res.status(403).json({ message: 'Auth token is expired or missing' });
+      //   }
 
         // **Explicitly type the decoded object as JwtPayload**
-        const payload = decoded as JwtPayload;
-
+        // const payload = decoded as JwtPayload;
+        const payload = await jwtParseFunction(authToken, jwtPublicKey) as JwtPayload;
         req.context = {
           authToken,
           userId: payload?.userId || null,
@@ -41,8 +42,8 @@ export const installApiContext = async (req: Request, res: Response, next: NextF
         };
 
         next();
-      });
-    } else {
+      }
+     else {
       res.status(403).json({ message: 'Auth token is expired or missing' });
     }
   } catch (error) {

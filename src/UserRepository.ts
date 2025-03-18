@@ -1,18 +1,27 @@
 import { injectable, inject } from 'inversify';
 import { ObjectId } from 'mongodb';
 import { DependencyKeys } from './constant';
-import { IDatabase } from '../src/contracts/IDataBase';
-import { UserRequest, UserResponse, DatabaseError, DuplicateKeyError, NotFoundError } from '../src/models/UserModel';
+import { IDatabase } from './mongo_connector/contracts/IDataBase';
+// import { UserRequest, UserResponse } from '../src/models/UserModel';
+import { UserRequest } from './models/userRequest';
+import { UserResponse } from './models/userResponse';
 import { IUserRepository } from './contracts/IUserRepository';
+import { DatabaseError } from './errors/DBerror';
+import { DuplicateKeyError } from './errors/DuplicationError';
+import { NotFoundError } from './errors/NotFound';
+import { DBConfig } from './mongo_connector/DBConfigProvider';
 import bcrypt from 'bcrypt'
+import { IDBConfig } from './mongo_connector/contracts/IDBConfig';
 @injectable()
 export class UserRepository implements IUserRepository {
   private db: IDatabase;
   private readonly collectionName = 'users';
   private readonly saltRounds = 10;
+  private dbConfig: IDBConfig;
 
-  constructor(@inject(DependencyKeys.DatabaseAccess) db: IDatabase) {
+  constructor(@inject(DependencyKeys.DatabaseAccess) db: IDatabase, @inject(DependencyKeys.DBConfig) dbConfig:IDBConfig) {
     this.db = db;
+    this.dbConfig=dbConfig
   }
 
   async createUserAsync(user: UserRequest): Promise<UserResponse> {
@@ -59,7 +68,7 @@ export class UserRepository implements IUserRepository {
 
   async findUserAsync(email: string): Promise<UserResponse | null> {
     try {
-      const user = await this.db.findOne<UserResponse>(this.collectionName, {email});
+      const user = await this.db.findOne<UserResponse>(this.collectionName, {email: email});
       if (!user){
         throw new NotFoundError("Email not exist");
       }
@@ -81,10 +90,10 @@ export class UserRepository implements IUserRepository {
       const pageNum = Math.max(1, page);
       const limitNum = Math.max(1, limit);
       const skip = (pageNum - 1) * limitNum;
-      const total = await this.db.getCollection<UserResponse>(this.collectionName).countDocuments();
+      const total = await this.dbConfig.getCollection<UserResponse>(this.collectionName).countDocuments();
 
       // Fetch the paginated users
-      const users = await this.db.getCollection<UserResponse>(this.collectionName)
+      const users = await this.dbConfig.getCollection<UserResponse>(this.collectionName)
         .find()
         .skip(skip)
         .limit(limitNum)
@@ -136,6 +145,28 @@ export class UserRepository implements IUserRepository {
       }
       throw new DatabaseError(`Failed to delete user with ID ${id}`, 'Unknown error');
     }
+  }
+  async deleteUsersAsync(emails: string[]): Promise<{ deletedCount: number, notFoundEmails: string[] }> {
+      try{
+        // const notFoundEmails: string[] = [];
+        const deletePromises = emails.map(async email=>{
+          const userExists = await this.db.findOne(this.collectionName,{ email });
+          if (!userExists) {
+            return {email,deleted: false };
+          }
+        const deleted=await this.db.deleteOne(this.collectionName, { email });
+        return deleted?{email,deleted:true}:{email,deleted:false}
+        });
+        const results = await Promise.all(deletePromises);
+        const deletedCount = results.filter(result=>result.deleted).length;
+        const notFoundEmails=results.filter(result=>!result.deleted).map(result=>result.email);
+        return {deletedCount,notFoundEmails};
+      } catch(e){
+     if(e instanceof Error){
+      throw new DatabaseError(`Failed to delete user with email ${emails}`, e.message);
+     }
+     throw new DatabaseError(`Failed to delete user with email ${emails}`, 'Unknown error');
+      }
   }
 }
 

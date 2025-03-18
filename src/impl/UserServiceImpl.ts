@@ -54,7 +54,10 @@ import { Redis } from 'ioredis';
 import { DependencyKeys } from '../constant';
 import { IUserService } from '../contracts/IUserService';
 import { IUserRepository } from '../contracts/IUserRepository';
-import { UserRequest, UserResponse, ValidationError } from '../models/UserModel';
+// import { UserRequest, UserResponse, ValidationError } from '../models/UserModel';
+import { UserRequest } from '../models/userRequest';
+import { UserResponse } from '../models/userResponse';
+import { ValidationError } from '../errors/Validationerror';
 import { RedisClient } from '../redis/RedisClient';
 
 @injectable()
@@ -78,41 +81,60 @@ export class UserServiceImpl implements IUserService {
 
   async createUserAsync(user: UserRequest): Promise<UserResponse> {
     const userResponse = await this.userRepository.createUserAsync(user);
-    await this.redisClient.del('users:list');
+    // await this.redisClient.del('users:list');
     return userResponse;
   }
 
   async getUserAsync(id: string): Promise<UserResponse | null> {
     this.validateId(id);
-
     const cacheKey = `user:${id}`;
     const cachedUser = await this.redisClient.get(cacheKey);
     if (cachedUser) {
-      return JSON.parse(cachedUser) as UserResponse;
+      const user=JSON.parse(cachedUser)
+      return  new UserResponse(
+        user.id,
+        user.firstname,
+        user.lastname,
+        user.email,
+        user.age,
+        user.hashedPassword
+      )
     }
+    else {
     const user = await this.userRepository.getUserAsync(id);
     if (user) {
       // Cache the user for 1 hour
-      await this.redisClient.setex(cacheKey, 3600, JSON.stringify(user));
+      await this.redisClient.set(cacheKey,JSON.stringify(user),'EX',3600);
     }
     return user;
   }
+  }
 
   async findUserAsync(email: string): Promise<UserResponse | null> {
-    return await this.userRepository.findUserAsync(email);
+     const cachekey=`user:${email.toLowerCase()}`;
+     const cachedUser=await this.redisClient.get(cachekey);
+     if (cachedUser) {
+      const user=JSON.parse(cachedUser)
+      return  new UserResponse(
+        user.id,
+        user.firstname,
+        user.lastname,
+        user.email,
+        user.age,
+        user.hashedPassword
+      )
+    }
+    const user = await this.userRepository.findUserAsync(email);
+    if (user) {
+      // Cache the user for 1 hour
+      await this.redisClient.set(cachekey,JSON.stringify(user),'EX',3600);
+    }
+    return user;
+    // return await this.userRepository.findUserAsync(email);
   }
 
   async getAllAsync(page: number, limit: number): Promise<{ data: UserResponse[], pagination: { total: number, page: number, limit: number, totalPages: number } }> {
-    
-    const cacheKey = `users:${page}:${limit}`;
-    const cachedResult = await this.redisClient.get(cacheKey);
-    if (cachedResult) {
-      return JSON.parse(cachedResult) as { data: UserResponse[], pagination: { total: number, page: number, limit: number, totalPages: number } };
-    }
-    const result = await this.userRepository.getAllAsync(page, limit);
-    // Cache the result for 1 hour
-    await this.redisClient.setex(cacheKey, 3600, JSON.stringify(result));
-    return result;
+     return await this.userRepository.getAllAsync(page,limit);
   }
 
   async updateUserAsync(id: string, user: UserRequest): Promise<boolean> {
@@ -120,7 +142,6 @@ export class UserServiceImpl implements IUserService {
     const updated = await this.userRepository.updateUserAsync(id, user);
     if (updated) {
       await this.redisClient.del(`user:${id}`);
-      await this.redisClient.del('users:list');
     }
     return updated;
   }
@@ -130,8 +151,30 @@ export class UserServiceImpl implements IUserService {
     const deleted = await this.userRepository.deleteUserAsync(id);
     if (deleted) {
       await this.redisClient.del(`user:${id}`);
-      await this.redisClient.del('users:list');
     }
     return deleted;
+  }
+
+  async deleteUsersAsync(emails: string[]): Promise<{ deletedCount: Number,notFoundEmails: string[] }> {
+      const {deletedCount, notFoundEmails }= await this.userRepository.deleteUsersAsync(emails);
+      if(deletedCount>0){
+        // const cachekey=`user:${emails}`;
+        const redisDeletePromise=emails.map(async email=>{
+          const cachekey=`user:${email}`;
+           const exist= await this.redisClient.exists(cachekey);
+          if(exist){
+          this.redisClient.del(cachekey);
+          return {email,status:"deleted"};
+          }
+          else return {email,status:"not found"};
+        });
+       await Promise.all(redisDeletePromise);
+      //  const notFoundEmails = deletedResults.filter(result=>result?.status=="not found")
+      //  .map(result=>result?.email) as string[];
+       console.log("Delete Users Result:", { deletedCount: deletedCount, notFoundEmails });
+       return { deletedCount: deletedCount,notFoundEmails };
+        
+      }
+      return { deletedCount: 0, notFoundEmails: [] };
   }
 }
