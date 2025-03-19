@@ -58,7 +58,8 @@ import { IUserRepository } from '../contracts/IUserRepository';
 import { UserRequest } from '../models/userRequest';
 import { UserResponse } from '../models/userResponse';
 import { ValidationError } from '../errors/Validationerror';
-import { RedisClient } from '../redis/RedisClient';
+// import { RedisClient } from '../redis/RedisClient';
+import { RedisClient } from './RedisClient';
 
 @injectable()
 export class UserServiceImpl implements IUserService {
@@ -70,7 +71,7 @@ export class UserServiceImpl implements IUserService {
     @inject(DependencyKeys.RedisClient) redisClient: RedisClient
   ) {
     this.userRepository = userRepository;
-    this.redisClient = redisClient.getClient();
+    this.redisClient = redisClient.getclient();
   }
 
   private validateId(id: string): void {

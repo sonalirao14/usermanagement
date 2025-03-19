@@ -1,6 +1,6 @@
 import { Document as MongoDocument , ObjectId} from "mongodb";
 import { ValidationError } from "../errors/Validationerror";
-export class UserRequest implements MongoDocument {
+export class UserRequest{
   _id?: ObjectId;
 
   constructor(

@@ -1,5 +1,5 @@
 import { Document as MongoDocument , ObjectId} from "mongodb";
-export class UserResponse implements MongoDocument {
+export class UserResponse {
   _id?: ObjectId;
 
   constructor(

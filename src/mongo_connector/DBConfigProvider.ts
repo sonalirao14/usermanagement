@@ -79,7 +79,7 @@ export class DBConfig implements IDBConfig {
 
   getDb(): Db {
     if (!this.db) {
-      throw new DatabaseError('MongoDB is not connected', 'Database not initialized');
+      throw new DatabaseError('MongoDB is not connected', "Database is not initialized");
     }
     return this.db;
   }

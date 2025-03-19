@@ -5,7 +5,8 @@ import { UserRoutes } from './routes/UserRoutes';
 import { DependencyKeys } from './constant';
 import { DatabaseAccess } from './mongo_connector/DBOperations';
 import { DBConfig } from './mongo_connector/DBConfigProvider';
-import { RedisClient } from './redis/RedisClient';
+// import { RedisClient } from './redis/RedisClient';
+import { RedisClient } from './impl/RedisClient';
 require('dotenv').config();
 
 process.on('unhandledRejection', (reason, promise) => {

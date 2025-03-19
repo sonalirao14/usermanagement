@@ -14,19 +14,19 @@ import bcrypt from 'bcrypt'
 import { IDBConfig } from './mongo_connector/contracts/IDBConfig';
 @injectable()
 export class UserRepository implements IUserRepository {
-  private db: IDatabase;
+  private db: IDatabase<any>;
   private readonly collectionName = 'users';
   private readonly saltRounds = 10;
   private dbConfig: IDBConfig;
 
-  constructor(@inject(DependencyKeys.DatabaseAccess) db: IDatabase, @inject(DependencyKeys.DBConfig) dbConfig:IDBConfig) {
+  constructor(@inject(DependencyKeys.DatabaseAccess) db: IDatabase<any>, @inject(DependencyKeys.DBConfig) dbConfig:IDBConfig) {
     this.db = db;
     this.dbConfig=dbConfig
   }
 
   async createUserAsync(user: UserRequest): Promise<UserResponse> {
     try {
-      const existingUser = await this.db.findOne<UserRequest>(this.collectionName, { email: user.email });
+      const existingUser = await this.db.findOne(this.collectionName, { email: user.email });
       if (existingUser) {
         throw new DuplicateKeyError(`Duplicate email: ${user.email}`, { email: user.email });
       }
@@ -55,7 +55,7 @@ export class UserRepository implements IUserRepository {
 
   async getUserAsync(id: string): Promise<UserResponse | null> {
     try {
-      const user = await this.db.findOne<UserResponse>(this.collectionName, { _id: new ObjectId(id) });
+      const user = await this.db.findOne(this.collectionName, { _id: new ObjectId(id) });
       if (!user) return null;
       return new UserResponse(id, user.firstname, user.lastname, user.email, user.age, user.hashedPassword);
     } catch (error) {
@@ -68,7 +68,7 @@ export class UserRepository implements IUserRepository {
 
   async findUserAsync(email: string): Promise<UserResponse | null> {
     try {
-      const user = await this.db.findOne<UserResponse>(this.collectionName, {email: email});
+      const user = await this.db.findOne(this.collectionName, {email: email});
       if (!user){
         throw new NotFoundError("Email not exist");
       }
@@ -90,15 +90,16 @@ export class UserRepository implements IUserRepository {
       const pageNum = Math.max(1, page);
       const limitNum = Math.max(1, limit);
       const skip = (pageNum - 1) * limitNum;
-      const total = await this.dbConfig.getCollection<UserResponse>(this.collectionName).countDocuments();
+      const total = await this.dbConfig.getCollection(this.collectionName).countDocuments();
 
       // Fetch the paginated users
-      const users = await this.dbConfig.getCollection<UserResponse>(this.collectionName)
+      const users : UserResponse[] = await this.dbConfig.getCollection<UserResponse>(this.collectionName)
         .find()
         .skip(skip)
         .limit(limitNum)
         .toArray();
-      const data = users.map(user => new UserResponse(user._id.toString(), user.firstname, user.lastname, user.email, user.age, user.hashedPassword));
+       
+      const data = users.map(user => new UserResponse((user._id as ObjectId).toString(), user.firstname, user.lastname, user.email, user.age, user.hashedPassword));
       const totalPages = Math.ceil(total / limitNum);
 
       return {
@@ -120,11 +121,11 @@ export class UserRepository implements IUserRepository {
 
   async updateUserAsync(id: string, user: UserRequest): Promise<boolean> {
     try {
-      const existingUser = await this.db.findOne<UserRequest &  { _id: ObjectId }>(this.collectionName, { email: user.email });
+      const existingUser = await this.db.findOne(this.collectionName, { email: user.email });
       if (existingUser && existingUser._id.toString() !== id) {
         throw new DuplicateKeyError(`Duplicate email: ${user.email}`, { email: user.email });
       }
-      return await this.db.updateOne<UserRequest>(this.collectionName, { _id: new ObjectId(id) }, { $set: user });
+      return await this.db.updateOne(this.collectionName, { _id: new ObjectId(id) }, { $set: user });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes('Duplicate')) {

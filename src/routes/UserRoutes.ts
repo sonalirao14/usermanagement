@@ -379,7 +379,7 @@ export class UserRoutes {
         const userRequest = UserRequest.fromJson(req.body);
         const updated = await this.userService.updateUserAsync(id, userRequest);
         if (!updated) {
-          res.status(404).json({ message: 'User not found' });
+          res.status(404).json({ message: 'User not updated' });
           return;
         }
         res.status(200).json({ message: 'User updated successfully' });

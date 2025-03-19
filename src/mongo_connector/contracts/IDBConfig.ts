@@ -1,9 +1,9 @@
-import { Db, Collection, Document as MongoDocument } from 'mongodb';
+// import { Db, Collection, Document as MongoDocument } from 'mongodb';
 
 export interface IDBConfig {
   initialize(): Promise<void>;
   ensureConnected(): Promise<void>;
-  getDb(): Db;
-  getCollection<T extends MongoDocument>(name: string): Collection<T>;
+  // getDb(): Db;
+  getCollection<T>(name: string): any;
   disconnect(): Promise<void>;
 }

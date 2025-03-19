@@ -35,10 +35,10 @@ export class AppBuilder {
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   };
-  private dbAccess: DatabaseAccess;
+  private dbAccess: DatabaseAccess<any>;
 
   constructor(
-    @inject(DependencyKeys.DBConfig) dbAccess: DatabaseAccess
+    @inject(DependencyKeys.DBConfig) dbAccess: DatabaseAccess<any>
   ) {
     this.app = express();
     this.dbAccess = dbAccess;

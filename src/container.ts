@@ -7,16 +7,22 @@ import { UserRoutes } from './routes/UserRoutes';
 import { DatabaseAccess } from './mongo_connector/DBOperations';
 import { UserRepository } from './UserRepository';
 import { IUserRepository } from './contracts/IUserRepository';
-import { RedisClient } from './redis/RedisClient';
+// import { RedisClient } from './redis/RedisClient';
 import { DBConfig } from './mongo_connector/DBConfigProvider';
 import { IDBConfig } from './mongo_connector/contracts/IDBConfig';
+import { IRediConfig } from './contracts/IRedisConfig';
+import { IRedisClient } from './contracts/IRedisClient';
+import { RedisConfig } from './impl/RedisConfig';
+import { RedisClient } from './impl/RedisClient';
 
 const container = new Container();
  
-container.bind<IDBConfig>(DependencyKeys.DBConfig).to(DBConfig)
 
-// Bind DatabaseAccess
-container.bind<DatabaseAccess>(DependencyKeys.DatabaseAccess).to(DatabaseAccess);
+container.bind<IRediConfig>(DependencyKeys.RedisConfig).to(RedisConfig);
+container.bind<IRedisClient>(DependencyKeys.RedisClient).to(RedisClient)
+
+container.bind<IDBConfig>(DependencyKeys.DBConfig).to(DBConfig)
+container.bind<DatabaseAccess<any>>(DependencyKeys.DatabaseAccess).to(DatabaseAccess<any>);
 
 // Bind IUserService to UserServiceImpl
 container.bind<IUserService>(DependencyKeys.UserService).to(UserServiceImpl);
@@ -31,6 +37,6 @@ container.bind<AppBuilder>(DependencyKeys.AppBuilder).to(AppBuilder);
 container.bind<IUserRepository>(DependencyKeys.UserRepository).to(UserRepository);
 
 // Bind RedisClient
-container.bind<RedisClient>(DependencyKeys.RedisClient).to(RedisClient)
+// container.bind<RedisClient>(DependencyKeys.RedisClient).to(RedisClient)
 
 export default container;
