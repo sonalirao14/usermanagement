@@ -1,6 +1,6 @@
-import { Document as MongoDocument , ObjectId} from "mongodb";
+// import { Document as MongoDocument , ObjectId} from "mongodb";
 export class UserResponse {
-  _id?: ObjectId;
+  _id?: String|any;
 
   constructor(
     public id: string,

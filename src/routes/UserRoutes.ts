@@ -260,7 +260,6 @@ export class UserRoutes {
           lastname: userResponse.lastname,
           email: userResponse.email,
           age: userResponse.age,
-          hashedPassword: userResponse.hashedPassword
         });
       } catch (error) {
         next(error);

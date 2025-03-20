@@ -150,11 +150,12 @@ export class UserRepository implements IUserRepository {
   async deleteUsersAsync(emails: string[]): Promise<{ deletedCount: number, notFoundEmails: string[] }> {
       try{
         // const notFoundEmails: string[] = [];
+        const existingUsers = await this.db.findAll(this.collectionName, { email: { $in: emails } });
+        console.log("Existing users", existingUsers)
+        const existingEmails = new Set(existingUsers.map(user => user.email));
         const deletePromises = emails.map(async email=>{
-          const userExists = await this.db.findOne(this.collectionName,{ email });
-          if (!userExists) {
-            return {email,deleted: false };
-          }
+          if (!existingEmails.has(email)) 
+            return { email, deleted: false };
         const deleted=await this.db.deleteOne(this.collectionName, { email });
         return deleted?{email,deleted:true}:{email,deleted:false}
         });
