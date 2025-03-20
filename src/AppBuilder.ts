@@ -9,7 +9,7 @@ import { DependencyKeys } from './constant';
 import { errorHandler } from './middlewares/errorHandler';
 import { routeHandler } from './middlewares/routeHandler';
 import { requestLogger } from './middlewares/requestLogger';
-import { DatabaseAccess } from './mongo_connector/DataBaseAccess';
+import { DatabaseAccess } from './mongo_connector/DBOperations';
 import { publicRoutes } from './config/publicRoute';
 import { installApiContext, loadDefaultContext,setJwtKeys } from './middlewares/authMiddleware';
 @injectable()
@@ -35,10 +35,10 @@ export class AppBuilder {
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   };
-  private dbAccess: DatabaseAccess;
+  private dbAccess: DatabaseAccess<any>;
 
   constructor(
-    @inject(DependencyKeys.DatabaseAccess) dbAccess: DatabaseAccess
+    @inject(DependencyKeys.DBConfig) dbAccess: DatabaseAccess<any>
   ) {
     this.app = express();
     this.dbAccess = dbAccess;
