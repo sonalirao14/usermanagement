@@ -2,13 +2,13 @@
 import { ValidationError } from "../errors/Validationerror";
 import { PasswordValidator, ErrorInterface } from "password-validator-pro";
 const validator = new PasswordValidator({
-  minLength: 8,                // Minimum length of the password
-  maxLength: 20,               // Maximum length of the password
-  requireUppercase: true,      // Require at least one uppercase letter
-  requireLowercase: true,      // Require at least one lowercase letter
-  requireNumbers: true,        // Require at least one number
-  requireSpecialChars: true,   // Require at least one special character
-  combineErrors: false,        // Set this to false so we can list errors separately
+  minLength: 8,                
+  maxLength: 20,               
+  requireUppercase: true,      
+  requireLowercase: true,      
+  requireNumbers: true,        
+  requireSpecialChars: true,   
+  combineErrors: false,        
 });
 export class UserRequest {
   _id?: String | any;
@@ -23,9 +23,30 @@ export class UserRequest {
   public static fromJson(json: any): UserRequest {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const errors: string[] = [];
-    if (!json || !json.firstname || !json.email || json.age === undefined || typeof json.age !== 'number' || !json.password) {
-      throw new ValidationError('Invalid user data: name, email, age, and password are required, and age must be a number');
+    if (!json) {
+      throw new ValidationError('Invalid data: No input provided');
     }
+    
+    if (!json.firstname) {
+      throw new ValidationError('Firstname is required');
+    }
+    
+    if (!json.email) {
+      throw new ValidationError('Email is required');
+    }
+    
+    if (json.age === undefined) {
+      throw new ValidationError('Age is required');
+    }
+    
+    if (typeof json.age !== 'number') {
+      throw new ValidationError('Age must be a number');
+    }
+    
+    if (!json.password) {
+      throw new ValidationError('Password is required');
+    }
+    
     if (!emailRegex.test(json.email)) {
       errors.push("Email format is invalid");
     }

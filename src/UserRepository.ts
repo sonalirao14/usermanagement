@@ -12,6 +12,8 @@ import { NotFoundError } from './errors/NotFound';
 import { DBConfig } from './mongo_connector/DBConfigProvider';
 import bcrypt from 'bcrypt'
 import { IDBConfig } from './mongo_connector/contracts/IDBConfig';
+import { ValidationError } from './errors/Validationerror';
+import { UpdateUserRequest } from './models/UpdateUserReq';
 @injectable()
 export class UserRepository implements IUserRepository {
   private db: IDatabase<any>;
@@ -68,11 +70,14 @@ export class UserRepository implements IUserRepository {
 
   async findUserAsync(email: string): Promise<UserResponse | null> {
     try {
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new ValidationError("Invalid email format");
+      }
       const user = await this.db.findOne(this.collectionName, {email: email});
       if (!user){
-        throw new NotFoundError("Email not exist");
+        throw new NotFoundError("Incorrect Email");
       }
-      if(!user._id){
+      if(!user.email){
          throw new NotFoundError("Email user not exist");
       }
       return new UserResponse(user._id.toString(), user.firstname, user.lastname, user.email, user.age, user.hashedPassword);
@@ -119,7 +124,7 @@ export class UserRepository implements IUserRepository {
     }
   }
 
-  async updateUserAsync(id: string, user: UserRequest): Promise<boolean> {
+  async updateUserAsync(id: string, user: UpdateUserRequest): Promise<boolean> {
     try {
       const existingUser = await this.db.findOne(this.collectionName, { email: user.email });
       if (existingUser && existingUser._id.toString() !== id) {

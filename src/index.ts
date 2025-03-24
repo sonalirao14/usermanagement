@@ -7,15 +7,9 @@ import { DatabaseAccess } from './mongo_connector/DBOperations';
 import { DBConfig } from './mongo_connector/DBConfigProvider';
 // import { RedisClient } from './redis/RedisClient';
 import { RedisClient } from './impl/RedisClient';
-require('dotenv').config();
+import dotenv from "dotenv";
+dotenv.config();
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'Reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-});
 
 const portEnv = process.env.PORT;
 const port: number = portEnv && !isNaN(parseInt(portEnv)) ? parseInt(portEnv) : 3000;
@@ -28,7 +22,7 @@ async function startServer() {
 
   try {
     await dbAccess.initialize();
-    console.log('Successfully Database initialised!');
+    console.log('Successfully Database initialised and connected..');
   } catch (e) {
     console.error('Failure in initialisation of database:', e);
     process.exit(1);
@@ -53,12 +47,11 @@ async function startServer() {
   const shutdown = async () => {
     console.log('Trying to shut down server..');
     await redisClient.disconnect();
+    await dbAccess.disconnect();
     console.log('Server closed');
     process.exit(0);
   };
-  
   process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
 }
 
 startServer();

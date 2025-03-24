@@ -5,7 +5,8 @@ import { DatabaseError } from '../errors/DBerror';
 import { DependencyKeys } from '../constant';
 import { IDBConfig } from './contracts/IDBConfig';
 // import { DBConfig } from './DBConfigProvider';
-require('dotenv').config();
+import dotenv from 'dotenv'
+dotenv.config();
 
 @injectable()
 export class DatabaseAccess<T> implements IDatabase<T> {
@@ -20,7 +21,10 @@ export class DatabaseAccess<T> implements IDatabase<T> {
       const result = await collection.insertOne(document);
       return result.insertedId.toString();
     } catch (error) {
-      throw new DatabaseError(`Failed to insert document into collection '${collectionName}'`, error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof Error) {
+        throw new DatabaseError(`Failed to insert document in collection '${collectionName}'`, error.message);
+      }
+      throw new DatabaseError(`Failed to insert document in collection '${collectionName}'`, 'Unknown error');
     }
   }
   async findOne(collectionName: string, query: Filter<T>, options?: FindOptions): Promise<T | null> {

@@ -60,6 +60,7 @@ import { UserResponse } from '../models/userResponse';
 import { ValidationError } from '../errors/Validationerror';
 // import { RedisClient } from '../redis/RedisClient';
 import { RedisClient } from './RedisClient';
+import { UpdateUserRequest } from '../models/UpdateUserReq';
 
 @injectable()
 export class UserServiceImpl implements IUserService {
@@ -138,7 +139,7 @@ export class UserServiceImpl implements IUserService {
      return await this.userRepository.getAllAsync(page,limit);
   }
 
-  async updateUserAsync(id: string, user: UserRequest): Promise<boolean> {
+  async updateUserAsync(id: string, user: UpdateUserRequest): Promise<boolean> {
     this.validateId(id);
     const updated = await this.userRepository.updateUserAsync(id, user);
     if (updated) {

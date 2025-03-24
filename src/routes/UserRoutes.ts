@@ -234,6 +234,7 @@ import { IUserService } from '../contracts/IUserService';
 import { UserRequest } from '../models/userRequest';
 import { LoginRequest } from '../models/loginRequest';
 import { ValidationError } from '../errors/Validationerror';
+import { UpdateUserRequest } from '../models/UpdateUserReq';
 
 @injectable()
 export class UserRoutes {
@@ -356,26 +357,10 @@ export class UserRoutes {
     });
 
     // Routes restricted to admin users
-    this.router.post('/user', this.requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const userRequest = UserRequest.fromJson(req.body);
-        const userResponse = await this.userService.createUserAsync(userRequest);
-        res.status(201).json({
-          id: userResponse.id,
-          firstname: userResponse.firstname,
-          lastname: userResponse.lastname,
-          email: userResponse.email,
-          age: userResponse.age,
-        });
-      } catch (error) {
-        next(error);
-      }
-    });
-
     this.router.put('/user/:id', this.requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const id = req.params.id;
-        const userRequest = UserRequest.fromJson(req.body);
+        const userRequest = UpdateUserRequest.fromJson(req.body);
         const updated = await this.userService.updateUserAsync(id, userRequest);
         if (!updated) {
           res.status(404).json({ message: 'User not updated' });
